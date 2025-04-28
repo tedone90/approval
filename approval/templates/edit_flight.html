@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifica Volo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container my-4">
+    <h2 class="mb-4">Modifica Volo</h2>
+    <form method="POST">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Data volo</label>
+                <input type="date" name="flight_date" value="{{ flight['flight_date'] }}" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Cliente</label>
+                <input type="text" name="client" value="{{ flight['client'] }}" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Prezzo</label>
+                <input type="number" name="price" step="0.01" value="{{ flight['price'] }}" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Riferimento Avinode</label>
+                <input type="text" name="ref_avinode" value="{{ flight['ref_avinode'] }}" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Riferimento FL3XX</label>
+                <input type="text" name="ref_fl3xx" value="{{ flight['ref_fl3xx'] }}" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Stato</label>
+                <select name="status" class="form-select" required>
+                    <option value="Chiesto OA" {% if flight['status'] == 'Chiesto OA' %}selected{% endif %}>Chiesto OA</option>
+                    <option value="Ricevuto OA" {% if flight['status'] == 'Ricevuto OA' %}selected{% endif %}>Ricevuto OA</option>
+                    <option value="Contratto inviato" {% if flight['status'] == 'Contratto inviato' %}selected{% endif %}>Contratto inviato</option>
+                    <option value="Contratto firmato ricevuto (volo confermato)" {% if flight['status'] == 'Contratto firmato ricevuto (volo confermato)' %}selected{% endif %}>Contratto firmato ricevuto (volo confermato)</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Handler</label>
+                <select name="handler" class="form-select" required>
+                    <option value="TEDO" {% if flight['handler'] == 'TEDO' %}selected{% endif %}>TEDO</option>
+                    <option value="BUCCI" {% if flight['handler'] == 'BUCCI' %}selected{% endif %}>BUCCI</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Note</label>
+                <textarea name="notes" class="form-control" rows="4">{{ flight['notes'] }}</textarea>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Aggiorna</button>
+        <a class="btn btn-secondary mt-3" href="{{ url_for('index') }}">Annulla</a>
+    </form>
+</body>
+</html>
