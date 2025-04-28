@@ -1,25 +1,35 @@
-
 from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
-import shutil
+import psycopg2
 import os
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
+DB_HOST = 'dpg-d07oda49c44c73a6d6q0-a'
+DB_PORT = '5432'
+DB_NAME = 'approval_db_u0ke'
+DB_USER = 'approval_db_u0ke_user'
+DB_PASSWORD = 'FtY9eYchf9Qpwmjg8R3tv7VTD5TUhp13'
+
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD
+    )
     return conn
 
 def init_db():
     conn = get_db_connection()
-    conn.execute('''
+    cur = conn.cursor()
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS flights (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            flight_date TEXT,
+            id SERIAL PRIMARY KEY,
+            flight_date DATE,
             client TEXT,
-            price REAL,
+            price FLOAT,
             ref_avinode TEXT,
             ref_fl3xx TEXT,
             status TEXT,
@@ -28,8 +38,8 @@ def init_db():
         )
     ''')
     conn.commit()
+    cur.close()
     conn.close()
-    os.makedirs('backup', exist_ok=True)
 
 @app.route('/')
 def home():
@@ -38,25 +48,42 @@ def home():
 @app.route('/index', methods=['GET', 'POST'])
 def index():
     conn = get_db_connection()
+    cur = conn.cursor()
     if request.method == 'POST':
         search = request.form['search']
-        query = "SELECT * FROM flights WHERE client LIKE ? OR ref_avinode LIKE ? OR ref_fl3xx LIKE ? OR status LIKE ? OR notes LIKE ? OR handler LIKE ? ORDER BY date(flight_date) ASC"
-        flights = conn.execute(query, (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%')).fetchall()
+        cur.execute("""
+            SELECT * FROM flights
+            WHERE client ILIKE %s OR ref_avinode ILIKE %s OR ref_fl3xx ILIKE %s OR status ILIKE %s OR notes ILIKE %s OR handler ILIKE %s
+            ORDER BY flight_date ASC
+        """, (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%'))
     else:
-        flights = conn.execute('SELECT * FROM flights ORDER BY date(flight_date) ASC').fetchall()
+        cur.execute('SELECT * FROM flights ORDER BY flight_date ASC')
+    flights = cur.fetchall()
     conn.close()
 
     today = datetime.now().date()
     upcoming_flights = []
+    flight_data = []
     for flight in flights:
+        flight_obj = {
+            'id': flight[0],
+            'flight_date': flight[1],
+            'client': flight[2],
+            'price': flight[3],
+            'ref_avinode': flight[4],
+            'ref_fl3xx': flight[5],
+            'status': flight[6],
+            'notes': flight[7],
+            'handler': flight[8]
+        }
+        flight_data.append(flight_obj)
         try:
-            flight_date = datetime.strptime(flight['flight_date'], "%Y-%m-%d").date()
-            if today <= flight_date <= today + timedelta(days=5):
-                upcoming_flights.append(flight['id'])
+            if today <= flight[1] <= today + timedelta(days=5):
+                upcoming_flights.append(flight[0])
         except:
             continue
 
-    return render_template('index.html', flights=flights, upcoming_flights=upcoming_flights)
+    return render_template('index.html', flights=flight_data, upcoming_flights=upcoming_flights)
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_flight():
@@ -71,14 +98,14 @@ def add_flight():
         handler = request.form['handler']
 
         conn = get_db_connection()
-        conn.execute('''
+        cur = conn.cursor()
+        cur.execute('''
             INSERT INTO flights (flight_date, client, price, ref_avinode, ref_fl3xx, status, notes, handler)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         ''', (flight_date, client, price, ref_avinode, ref_fl3xx, status, notes, handler))
         conn.commit()
+        cur.close()
         conn.close()
-
-        backup_database()
 
         return redirect(url_for('index'))
     return render_template('add_flight.html')
@@ -86,7 +113,10 @@ def add_flight():
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit_flight(id):
     conn = get_db_connection()
-    flight = conn.execute('SELECT * FROM flights WHERE id = ?', (id,)).fetchone()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM flights WHERE id = %s', (id,))
+    flight = cur.fetchone()
+
     if request.method == 'POST':
         flight_date = request.form['flight_date']
         client = request.form['client']
@@ -97,35 +127,41 @@ def edit_flight(id):
         notes = request.form['notes']
         handler = request.form['handler']
 
-        conn.execute('''
+        cur.execute('''
             UPDATE flights
-            SET flight_date = ?, client = ?, price = ?, ref_avinode = ?, ref_fl3xx = ?, status = ?, notes = ?, handler = ?
-            WHERE id = ?
+            SET flight_date = %s, client = %s, price = %s, ref_avinode = %s, ref_fl3xx = %s, status = %s, notes = %s, handler = %s
+            WHERE id = %s
         ''', (flight_date, client, price, ref_avinode, ref_fl3xx, status, notes, handler, id))
         conn.commit()
+        cur.close()
         conn.close()
 
-        backup_database()
-
         return redirect(url_for('index'))
+
     conn.close()
-    return render_template('edit_flight.html', flight=flight)
+    flight_obj = {
+        'id': flight[0],
+        'flight_date': flight[1],
+        'client': flight[2],
+        'price': flight[3],
+        'ref_avinode': flight[4],
+        'ref_fl3xx': flight[5],
+        'status': flight[6],
+        'notes': flight[7],
+        'handler': flight[8]
+    }
+    return render_template('edit_flight.html', flight=flight_obj)
 
 @app.route('/delete/<int:id>', methods=['POST'])
 def delete_flight(id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM flights WHERE id = ?', (id,))
+    cur = conn.cursor()
+    cur.execute('DELETE FROM flights WHERE id = %s', (id,))
     conn.commit()
+    cur.close()
     conn.close()
 
-    backup_database()
-
     return redirect(url_for('index'))
-
-def backup_database():
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    if os.path.exists('database.db'):
-        shutil.copy('database.db', f'backup/database_{timestamp}.db')
 
 if __name__ == '__main__':
     init_db()
