@@ -9,7 +9,7 @@ DB_HOST = 'dpg-d07oda49c44c73a6d6q0-a.frankfurt-postgres.render.com'
 DB_PORT = '5432'
 DB_NAME = 'approval_db_u0ke'
 DB_USER = 'approval_db_u0ke_user'
-DB_PASSWORD = 'FtY9eYchf9Qpwmjg8R3tv7VTD5TUhp13'
+DB_PASSWORD = 'FtYgeYchf9GpwmjG8R3tv7VTD5TUhp13'
 
 def get_db_connection():
     conn = psycopg2.connect(
