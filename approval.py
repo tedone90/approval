@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-DB_HOST = 'dpg-d07oda49c44c73a6d6q0-a'
+DB_HOST = 'postgresql://approval_db_u0ke_user:FtYgeYchf9GpwmjG8R3tv7VTD5TUhp13@dpg-d07oda49c44c73a6d6q0-a/approval_db_u0ke'
 DB_PORT = '5432'
 DB_NAME = 'approval_db_u0ke'
 DB_USER = 'approval_db_u0ke_user'
